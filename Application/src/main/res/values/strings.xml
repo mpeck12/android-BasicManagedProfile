@@ -36,5 +36,18 @@
     <string name="restrictions_set">Restrictions set.</string>
     <string name="activity_not_found">No app can handle this intent.</string>
     <string name="cleared">Cleared.</string>
+    <string name="est_enroll">Generate, enroll, and set certificate using EST</string>
+    <string name="key_alias">test1</string>
+    <string-array name="algorithms">
+        <item>RSA</item>
+        <item>EC</item>
+    </string-array>
+    <string-array name="RSA_keysizes">
+        <item>2048</item>
+    </string-array>
+    <string-array name="EC_keysizes">
+        <item>256</item>
+        <item>384</item>
+    </string-array>
 
 </resources>

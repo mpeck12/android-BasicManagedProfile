@@ -66,6 +66,38 @@
             android:layout_height="wrap_content"
             android:text="@string/clear_chrome_restrictions" />
 
+
+        <!-- Key generation -->
+        <EditText
+            android:id="@+id/key_alias"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/key_alias"
+            android:singleLine="true"
+            android:inputType="text" />
+
+        <Spinner
+            android:id="@+id/algorithm_spinner"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/key_alias"
+            android:layout_alignParentLeft="true"
+        />
+
+        <Spinner
+            android:id="@+id/algorithm_keysize"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/key_alias"
+            android:layout_alignParentLeft="true"
+        />
+
+        <Button
+            android:id="@+id/est_enroll"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/est_enroll" />
+
         <!-- Intent Forwarding -->
 
         <Button
