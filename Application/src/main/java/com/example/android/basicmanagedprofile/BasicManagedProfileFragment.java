@@ -27,17 +27,46 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.security.KeyChain;
+import android.util.Base64;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.ScrollView;
 import android.widget.Switch;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.IOException;
+import java.io.ByteArrayOutputStream;
+import java.io.UnsupportedEncodingException;
+import java.security.PrivateKey;
+import java.security.Signature;
+import org.bouncycastle.asn1.DERBitString;
+import org.bouncycastle.asn1.ASN1Set;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.pkcs.CertificationRequest;
+import org.bouncycastle.asn1.pkcs.CertificationRequestInfo;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.x9.X9ObjectIdentifiers;
 
 import static android.app.admin.DevicePolicyManager.FLAG_MANAGED_CAN_ACCESS_PARENT;
 import static android.app.admin.DevicePolicyManager.FLAG_PARENT_CAN_ACCESS_MANAGED;
@@ -49,7 +78,8 @@ import static android.app.admin.DevicePolicyManager.FLAG_PARENT_CAN_ACCESS_MANAG
  */
 public class BasicManagedProfileFragment extends Fragment
         implements View.OnClickListener,
-        CompoundButton.OnCheckedChangeListener {
+        CompoundButton.OnCheckedChangeListener,
+        AdapterView.OnItemSelectedListener {
 
     /**
      * Tag for logging.
@@ -71,6 +101,10 @@ public class BasicManagedProfileFragment extends Fragment
      */
     private Button mButtonRemoveProfile;
 
+    private EditText mKeyAlias;
+    private Spinner algorithmSpinner;
+    private Spinner keysizeSpinner;
+
     /**
      * Whether the calculator app is enabled in this profile
      */
@@ -80,6 +114,9 @@ public class BasicManagedProfileFragment extends Fragment
      * Whether Chrome is enabled in this profile
      */
     private boolean mChromeEnabled;
+
+    ArrayAdapter<CharSequence> adapter_RSA;
+    ArrayAdapter<CharSequence> adapter_EC;
 
     public BasicManagedProfileFragment() {
     }
@@ -145,6 +182,19 @@ public class BasicManagedProfileFragment extends Fragment
         Switch toggleChrome = (Switch) view.findViewById(R.id.toggle_chrome);
         toggleChrome.setChecked(mChromeEnabled);
         toggleChrome.setOnCheckedChangeListener(this);
+        view.findViewById(R.id.est_enroll).setOnClickListener(this);
+        mKeyAlias = (EditText) view.findViewById(R.id.key_alias);
+        algorithmSpinner = (Spinner) view.findViewById(R.id.algorithm_spinner);
+        ArrayAdapter<CharSequence> adapter1 = ArrayAdapter.createFromResource(getActivity(), R.array.algorithms, android.R.layout.simple_dropdown_item_1line);
+        adapter1.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        algorithmSpinner.setAdapter(adapter1);
+        algorithmSpinner.setOnItemSelectedListener(this);
+        keysizeSpinner = (Spinner) view.findViewById(R.id.algorithm_keysize);
+        adapter_RSA = ArrayAdapter.createFromResource(getActivity(), R.array.RSA_keysizes, android.R.layout.simple_dropdown_item_1line);
+        adapter_RSA.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
+        adapter_EC = ArrayAdapter.createFromResource(getActivity(), R.array.EC_keysizes, android.R.layout.simple_dropdown_item_1line);
+        adapter_EC.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
+        keysizeSpinner.setAdapter(adapter_RSA);
     }
 
     @Override
@@ -175,6 +225,10 @@ public class BasicManagedProfileFragment extends Fragment
                 removeProfile();
                 break;
             }
+            case R.id.est_enroll: {
+                estEnroll();
+                break;
+            }
         }
     }
 
@@ -192,6 +246,27 @@ public class BasicManagedProfileFragment extends Fragment
                 break;
             }
         }
+    }
+
+    public void onItemSelected(AdapterView<?> parent, View view,
+        int pos, long id) {
+        switch (parent.getId()) {
+            case R.id.algorithm_spinner: {
+                String algorithm = parent.getItemAtPosition(pos).toString();
+                if(algorithm.equals("RSA")) {
+                    keysizeSpinner.setAdapter(adapter_RSA);
+                } else if (algorithm.equals("EC")) {
+                    keysizeSpinner.setAdapter(adapter_EC);
+                }
+                break;
+            }
+            case R.id.algorithm_keysize: {
+                break;
+            }
+        }
+    }
+
+    public void onNothingSelected(AdapterView<?> parent) {
     }
 
     /**
@@ -380,4 +455,29 @@ public class BasicManagedProfileFragment extends Fragment
         // The screen turns off here
     }
 
+    private void estEnroll() {
+        final Activity activity = getActivity();
+        if (null == activity || activity.isFinishing()) {
+            return;
+        }
+        final DevicePolicyManager manager =
+                (DevicePolicyManager) activity.getSystemService(Context.DEVICE_POLICY_SERVICE);
+        final String alias = mKeyAlias.getText().toString();
+        String algorithm = "RSA";
+        if (algorithmSpinner.getSelectedItem().toString().equals("EC")) {
+            algorithm = "EC";
+        }
+        int keysize = 2048;
+        if (keysizeSpinner.getSelectedItem().toString().equals("256")) {
+            keysize = 256;
+        }
+        else if (keysizeSpinner.getSelectedItem().toString().equals("384")) {
+            keysize = 384;
+        }
+        Intent intent = new Intent(activity, EnrollIntentService.class);
+        intent.putExtra("alias", alias);
+        intent.putExtra("algorithm", algorithm);
+        intent.putExtra("keysize", keysize);
+        activity.startService(intent);
+    }
 }
