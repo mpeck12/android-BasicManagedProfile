@@ -147,7 +147,7 @@ public class EnrollIntentService extends IntentService {
             System.arraycopy(newCertPEM2, 0, newCertPEM3, 0, newCertPEM2.length - 27);
             byte[] newCertDER = Base64.decode(newCertPEM3, Base64.DEFAULT);
             manager.setCertificate(BasicDeviceAdminReceiver.getComponentName(this),
-                    alias, newCertDER);
+                    alias, newCertDER, false);
         } catch (Exception e) {
             e.printStackTrace();
         }
